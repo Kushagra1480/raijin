@@ -2,7 +2,6 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import L from "leaflet";
 import { useState } from "react";
 import {
-  CircleMarker,
   MapContainer,
   Marker,
   Polyline,
@@ -39,6 +38,7 @@ function App() {
     iconAnchor: [12, 12],
   });
   const [selectedBalloon, setSelectedBalloon] = useState(null);
+  const [timeOffset, setTimeOffset] = useState(0);
   const {
     data: balloons,
     isLoading,
@@ -87,23 +87,30 @@ function App() {
       refetchInterval: i === 0 ? 60 * 60 * 1000 : false, // Only auto-refetch current (00.json)
     })),
   });
+  const displayBalloons = balloonQueries[timeOffset]?.data || [];
   const currentBalloons = balloonQueries[0]?.data || [];
   const buildPaths = () => {
     const paths = [];
-    const allData = balloonQueries.map((q) => q.data).filter(Boolean);
+    const allData = balloonQueries
+      .slice(timeOffset) // Only use current time + future (newer data)
+      .map((q) => q.data)
+      .filter(Boolean);
 
     if (allData.length === 0) return [];
 
-    for (let i = 0; i < currentBalloons.length; i++) {
+    const minBalloonCount = Math.min(...allData.map((d) => d.length));
+
+    for (let i = 0; i < minBalloonCount; i++) {
       const path = allData
         .map((hourData) => hourData[i])
-        .filter(Boolean)
+        .filter((pos) => pos && Array.isArray(pos) && pos.length === 3)
         .map(([lat, lon]) => [lat, lon]);
 
       if (path.length > 1) {
         paths.push({ balloonId: i, path });
       }
     }
+
     return paths;
   };
   const { data: weatherData } = useQuery({
@@ -120,6 +127,25 @@ function App() {
   return (
     <>
       <div className="relative h-screen w-screen font-mono">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white p-4 rounded-lg shadow-lg">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-semibold">Rewind:</label>
+            <input
+              type="range"
+              min="0"
+              max="23"
+              value={timeOffset}
+              onChange={(e) => {
+                setTimeOffset(Number(e.target.value));
+                setSelectedBalloon(null); // Clear selection on time change
+              }}
+              className="w-48"
+            />
+            <span className="text-sm font-mono">
+              {timeOffset === 0 ? "Now" : `-${timeOffset}h`}
+            </span>
+          </div>
+        </div>
         <div className="absolute top-4 right-4 z-[1000] bg-white p-4 rounded-lg shadow-lg max-w-xs">
           <h3 className="font-semibold mb-2 text-sm">Balloon Altitude</h3>
           <div className="space-y-1 text-xs mb-3">
@@ -233,7 +259,7 @@ function App() {
               opacity={0.6}
             />
           )}
-          {balloons?.map(
+          {displayBalloons?.map(
             ([lat, lon, alt]: [number, number, number], index: number) => (
               <Marker
                 position={[lat, lon]}
@@ -273,10 +299,10 @@ function App() {
               ))}
         </MapContainer>
       </div>
-      {balloons && (
+      {displayBalloons && (
         <div className="absolute bottom-4 left-4 z-[1000] bg-white px-4 py-2 rounded-lg shadow-lg">
-          <span className="font-semibold">{balloons.length}</span> balloons
-          tracked
+          <span className="font-semibold">{displayBalloons.length}</span>{" "}
+          balloons tracked tracked
         </div>
       )}
     </>
