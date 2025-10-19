@@ -1,5 +1,5 @@
 import { calculateBalloonStats, getBalloonName } from "../MapUtils";
-
+import balloonImage from "../balloon-asset.png";
 export const BalloonCard = ({ balloonId, pathData, onClose }) => {
   const stats = calculateBalloonStats(pathData);
   const name = getBalloonName(balloonId);
@@ -10,7 +10,7 @@ export const BalloonCard = ({ balloonId, pathData, onClose }) => {
       <div className=" p-4 relative">
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 hover:bg-white/20 rounded-full p-1 transition"
+          className="absolute top-2 right-2 hover:bg-white/20 rounded-full p-5 cursor-pointer transition"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -20,6 +20,9 @@ export const BalloonCard = ({ balloonId, pathData, onClose }) => {
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="pointer-events-none"
           >
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
@@ -28,11 +31,23 @@ export const BalloonCard = ({ balloonId, pathData, onClose }) => {
           BALLOON #{balloonId}
         </div>
         <div className="text-2xl font-bold mt-1">{name}</div>
-        <div className="text-sm opacity-90 mt-1">
-          Currently at {currentAlt.toFixed(1)} km
+        <div className="text-sm opacity-90 mt-1 flex items-center gap-2">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+          </span>
+          Currently at {currentAlt.toFixed(1)} km altitude
         </div>
       </div>
-
+      <div className="flex justify-center">
+        <div className="bg-white">
+          <img
+            src={balloonImage}
+            alt="Balloon"
+            className="w-40 h-40 object-contain"
+          />
+        </div>
+      </div>
       <div className="p-4 space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3">

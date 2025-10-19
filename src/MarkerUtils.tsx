@@ -13,18 +13,7 @@ export const BalloonMarker = memo<{
     position={[lat, lon]}
     icon={balloonIcon(alt, index)}
     eventHandlers={{ click: onClick }}
-  >
-    <Popup>
-      <div className="text-sm">
-        <strong>Balloon #{index}</strong> <br />
-        Lat: {lat.toFixed(4)}
-        <br />
-        Lon: {lon.toFixed(4)}
-        <br />
-        Alt: {alt.toFixed(2)} km
-      </div>
-    </Popup>
-  </Marker>
+  ></Marker>
 ));
 export const PathPoint = memo(({ position, alt, hoursAgo, balloonId }) => {
   const [lat, lon] = position;
