@@ -1,7 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import {
+  CircleMarker,
+  MapContainer,
+  Polyline,
+  Popup,
+  TileLayer,
+} from "react-leaflet";
 
 function App() {
+  const [selectedBalloon, setSelectedBalloon] = useState(null);
   const {
     data: balloons,
     isLoading,
@@ -27,6 +35,49 @@ function App() {
     staleTime: 60 * 60 * 1000,
     refetchInterval: 60 * 60 * 1000,
   });
+  const balloonQueries = useQueries({
+    queries: Array.from({ length: 24 }, (_, i) => ({
+      queryKey: ["balloons", i],
+      queryFn: async () => {
+        const file = i.toString().padStart(2, "0");
+        const res = await fetch(
+          `https://corsproxy.io/?https://a.windbornesystems.com/treasure/${file}.json`,
+        );
+        const data = await res.json();
+        return data.filter(
+          (pos) =>
+            Array.isArray(pos) &&
+            pos.length === 3 &&
+            pos[0] >= -90 &&
+            pos[0] <= 90 &&
+            pos[1] >= -180 &&
+            pos[1] <= 180,
+        );
+      },
+      staleTime: 60 * 60 * 1000, // 1 hour - matches API update frequency
+      refetchInterval: i === 0 ? 60 * 60 * 1000 : false, // Only auto-refetch current (00.json)
+    })),
+  });
+  const currentBalloons = balloonQueries[0]?.data || [];
+  const buildPaths = () => {
+    const paths = [];
+    const allData = balloonQueries.map((q) => q.data).filter(Boolean);
+
+    if (allData.length === 0) return [];
+
+    // Each balloon (by index) has a path
+    for (let i = 0; i < currentBalloons.length; i++) {
+      const path = allData
+        .map((hourData) => hourData[i])
+        .filter(Boolean)
+        .map(([lat, lon]) => [lat, lon]);
+
+      if (path.length > 1) {
+        paths.push({ balloonId: i, path });
+      }
+    }
+    return paths;
+  };
   const { data: weatherData } = useQuery({
     queryKey: ["rainviewer"],
     queryFn: async () => {
@@ -79,6 +130,9 @@ function App() {
                 fillOpacity={0.8}
                 color="#1e40af"
                 weight={2}
+                eventHandlers={{
+                  click: () => setSelectedBalloon(index),
+                }}
               >
                 <Popup>
                   <div className="text-sm">
@@ -93,6 +147,29 @@ function App() {
               </CircleMarker>
             ),
           )}
+          {selectedBalloon !== null &&
+            buildPaths()
+              .filter((p) => p.balloonId === selectedBalloon)
+              .map(({ balloonId, path }) => (
+                <>
+                  <Polyline
+                    key={`path-${balloonId}`}
+                    positions={path}
+                    color="#ef4444"
+                    weight={3}
+                    opacity={0.8}
+                    dashArray="10, 10"
+                  />
+                  <CircleMarker
+                    center={path[path.length - 1]} // Last element is oldest (start)
+                    radius={8}
+                    fillColor="#22c55e"
+                    fillOpacity={1}
+                    color="#fff"
+                    weight={2}
+                  />
+                </>
+              ))}
         </MapContainer>
       </div>
       {balloons && (
