@@ -9,10 +9,10 @@ import {
   TileLayer,
 } from "react-leaflet";
 const getAltitudeColor = (alt: number) => {
-  if (alt < 10) return "#3b82f6";
-  if (alt < 20) return "#10b981";
-  if (alt < 30) return "#ff9d00";
-  return "#ef4444";
+  if (alt < 10) return "#f8dda4";
+  if (alt < 20) return "#f9a03f";
+  if (alt < 30) return "#d45113";
+  return "#813405";
 };
 
 const balloonIcon = (alt: number, id: number) =>
@@ -57,10 +57,10 @@ const BalloonMarker = memo<{
 ));
 function App() {
   const startIcon = L.divIcon({
-    html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>`,
-    className: "custom-start-icon",
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    html: `<div style="width: 12px; height: 12px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+    className: "start-icon",
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
   });
   const [selectedBalloon, setSelectedBalloon] = useState(null);
   const [timeOffset, setTimeOffset] = useState(0);
@@ -151,7 +151,7 @@ function App() {
   return (
     <>
       <div className="relative h-screen w-screen font-mono">
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white p-4 rounded-lg shadow-lg">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white p-4 rounded-lg shadow-lg opacity-80">
           <div className="flex items-center gap-3">
             <label className="text-sm font-semibold">Rewind:</label>
             <input
@@ -170,37 +170,47 @@ function App() {
             </span>
           </div>
         </div>
-        <div className="absolute top-4 right-4 z-[1000] bg-white p-4 rounded-lg shadow-lg max-w-xs">
+        <div className="absolute top-4 right-4 z-[1000] bg-white p-4 rounded-lg shadow-lg max-w-xs opacity-80">
           <h3 className="font-semibold mb-2 text-sm">Balloon Altitude</h3>
-          <div className="space-y-1 text-xs mb-3">
+          <div className="space-y-1 text-xs mb-5">
             <div className="flex items-center gap-2">
               <div
                 className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#3b82f6" }}
+                style={{ backgroundColor: "#f8dda4" }}
               ></div>
               <span>&lt;10 km</span>
             </div>
             <div className="flex items-center gap-2">
               <div
                 className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#10b981" }}
+                style={{ backgroundColor: "#f9a03f" }}
               ></div>
               <span>10-20 km</span>
             </div>
             <div className="flex items-center gap-2">
               <div
                 className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#f59e0b" }}
+                style={{ backgroundColor: "#d45113" }}
               ></div>
               <span>20-30 km</span>
             </div>
             <div className="flex items-center gap-2">
               <div
                 className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#ef4444" }}
+                style={{ backgroundColor: "#813405" }}
               ></div>
               <span>&gt;30 km</span>
             </div>
+            <span className="text-xs font-bold mt-5">
+              Source:
+              <a
+                className="font-normal text-blue-700 hover:text-blue-800 underline"
+                href="https://api.windbornesystems.com/api-experience/docs"
+                target="_blank"
+              >
+                WindBorne API
+              </a>
+            </span>
           </div>
 
           <h3 className="font-semibold mb-2 text-sm border-t pt-3">
@@ -235,6 +245,16 @@ function App() {
               ></div>
               <span>Very heavy rain</span>
             </div>
+            <span className="text-xs font-bold mt-5">
+              Source:
+              <a
+                className="font-normal text-blue-700 hover:text-blue-800 underline"
+                href="https://www.rainviewer.com/"
+                target="_blank"
+              >
+                RainViewer API
+              </a>
+            </span>
           </div>
 
           <div className="mt-3 pt-3 border-t text-xs text-gray-600">
@@ -266,10 +286,14 @@ function App() {
         )}
 
         <MapContainer
-          center={[37.4419, 122.143]}
+          center={[37.4419, -122.143]}
           zoom={5}
           scrollWheelZoom={true}
           style={{ height: "100vh", width: "100%" }}
+          maxBounds={[
+            [-90, -180],
+            [90, 180],
+          ]}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -314,7 +338,7 @@ function App() {
         </MapContainer>
       </div>
       {displayBalloons && (
-        <div className="absolute bottom-4 left-4 z-[1000] bg-white px-4 py-2 rounded-lg shadow-lg font-mono">
+        <div className="absolute bottom-4 left-4 z-[1000] bg-white px-4 py-2 rounded-lg shadow-lg font-mono opacity-80">
           <span className="font-semibold">{displayBalloons.length}</span>{" "}
           balloons tracked tracked
         </div>
