@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import L from "leaflet";
+import React from "react";
 import { memo, useState } from "react";
 import {
   MapContainer,
@@ -55,6 +56,29 @@ const BalloonMarker = memo<{
     </Popup>
   </Marker>
 ));
+const PathPoint = memo(({ position, alt, hoursAgo, balloonId }) => {
+  const [lat, lon] = position;
+
+  return (
+    <Marker
+      position={position}
+      icon={balloonIcon(alt, balloonId)}
+      opacity={0.4}
+    >
+      <Popup>
+        <div className="text-xs">
+          <strong>{hoursAgo}h ago</strong>
+          <br />
+          Lat: {lat.toFixed(4)}
+          <br />
+          Lon: {lon.toFixed(4)}
+          <br />
+          Alt: {alt.toFixed(2)} km
+        </div>
+      </Popup>
+    </Marker>
+  );
+});
 function App() {
   const startIcon = L.divIcon({
     html: `<div style="width: 12px; height: 12px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
@@ -116,7 +140,7 @@ function App() {
   const buildPaths = () => {
     const paths = [];
     const allData = balloonQueries
-      .slice(timeOffset) // Only use current time + future (newer data)
+      .slice(timeOffset)
       .map((q) => q.data)
       .filter(Boolean);
 
@@ -125,13 +149,21 @@ function App() {
     const minBalloonCount = Math.min(...allData.map((d) => d.length));
 
     for (let i = 0; i < minBalloonCount; i++) {
-      const path = allData
-        .map((hourData) => hourData[i])
+      const pathWithData = allData
+        .map((hourData, hourIndex) => hourData[i])
         .filter((pos) => pos && Array.isArray(pos) && pos.length === 3)
-        .map(([lat, lon]) => [lat, lon]);
+        .map(([lat, lon, alt], index) => ({
+          position: [lat, lon],
+          alt,
+          hoursAgo: timeOffset + index,
+        }));
 
-      if (path.length > 1) {
-        paths.push({ balloonId: i, path });
+      if (pathWithData.length > 1) {
+        paths.push({
+          balloonId: i,
+          path: pathWithData.map((p) => p.position),
+          pathData: pathWithData,
+        });
       }
     }
 
@@ -145,7 +177,7 @@ function App() {
       );
       return res.json();
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   return (
@@ -322,18 +354,26 @@ function App() {
           {selectedBalloon !== null &&
             buildPaths()
               .filter((p) => p.balloonId === selectedBalloon)
-              .map(({ balloonId, path }) => (
-                <>
+              .map(({ balloonId, path, pathData }) => (
+                <React.Fragment key={`path-${balloonId}`}>
                   <Polyline
-                    key={`path-${balloonId}`}
                     positions={path}
                     color="#ef4444"
                     weight={3}
                     opacity={0.8}
                     dashArray="10, 10"
                   />
+                  {pathData.map((point, idx) => (
+                    <PathPoint
+                      key={`point-${balloonId}-${idx}`}
+                      position={point.position}
+                      alt={point.alt}
+                      hoursAgo={point.hoursAgo}
+                      balloonId={balloonId}
+                    />
+                  ))}
                   <Marker position={path[path.length - 1]} icon={startIcon} />
-                </>
+                </React.Fragment>
               ))}
         </MapContainer>
       </div>
