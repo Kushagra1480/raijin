@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import L from "leaflet";
-import { useState } from "react";
+import { memo, useState } from "react";
 import {
   MapContainer,
   Marker,
@@ -8,29 +8,54 @@ import {
   Popup,
   TileLayer,
 } from "react-leaflet";
+const getAltitudeColor = (alt: number) => {
+  if (alt < 10) return "#3b82f6";
+  if (alt < 20) return "#10b981";
+  if (alt < 30) return "#ff9d00";
+  return "#ef4444";
+};
 
-function App() {
-  const getAltitudeColor = (alt) => {
-    if (alt < 10) return "#3b82f6";
-    if (alt < 20) return "#10b981";
-    if (alt < 30) return "#ff9d00";
-    return "#ef4444";
-  };
-  const balloonIcon = (alt, id) =>
-    L.divIcon({
-      html: `
-      <div style="position: relative; display: inline-block;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${getAltitudeColor(alt)}">
-          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-          <path d="M13.5 3c5.187 0 9.5 3.044 9.5 7c0 3.017 -2.508 5.503 -6 6.514v3.486a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1v-4.046a21 21 0 0 1 -2.66 -1.411l-.13 -.082l-1.57 1.308a1 1 0 0 1 -1.634 -.656l-.006 -.113v-2.851l-.31 -.25a47 47 0 0 1 -.682 -.568l-.67 -.582a1 1 0 0 1 0 -1.498a47 47 0 0 1 1.351 -1.151l.311 -.25v-2.85a1 1 0 0 1 1.55 -.836l.09 .068l1.57 1.307l.128 -.08c2.504 -1.553 4.784 -2.378 6.853 -2.453zm-2.499 13.657l-.001 2.343h4l.001 -2.086q -.735 .086 -1.501 .086a9.6 9.6 0 0 1 -2.13 -.252z" />
-        </svg>
-        <span style="position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; white-space: nowrap; background: white; padding: 1px 3px; border-radius: 2px;">#${id}</span>
+const balloonIcon = (alt: number, id: number) =>
+  L.divIcon({
+    html: `
+    <div style="position: relative; display: inline-block;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${getAltitudeColor(alt)}">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M13.5 3c5.187 0 9.5 3.044 9.5 7c0 3.017 -2.508 5.503 -6 6.514v3.486a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1v-4.046a21 21 0 0 1 -2.66 -1.411l-.13 -.082l-1.57 1.308a1 1 0 0 1 -1.634 -.656l-.006 -.113v-2.851l-.31 -.25a47 47 0 0 1 -.682 -.568l-.67 -.582a1 1 0 0 1 0 -1.498a47 47 0 0 1 1.351 -1.151l.311 -.25v-2.85a1 1 0 0 1 1.55 -.836l.09 .068l1.57 1.307l.128 -.08c2.504 -1.553 4.784 -2.378 6.853 -2.453zm-2.499 13.657l-.001 2.343h4l.001 -2.086q -.735 .086 -1.501 .086a9.6 9.6 0 0 1 -2.13 -.252z" />
+      </svg>
+      <span style="position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; white-space: nowrap; background: white; padding: 1px 3px; border-radius: 2px;">#${id}</span>
+    </div>
+  `,
+    className: "custom-balloon-icon",
+    iconSize: [24, 40],
+    iconAnchor: [12, 12],
+  });
+
+const BalloonMarker = memo<{
+  lat: number;
+  lon: number;
+  alt: number;
+  index: number;
+  onClick: () => void;
+}>(({ lat, lon, alt, index, onClick }) => (
+  <Marker
+    position={[lat, lon]}
+    icon={balloonIcon(alt, index)}
+    eventHandlers={{ click: onClick }}
+  >
+    <Popup>
+      <div className="text-sm">
+        <strong>Balloon #{index}</strong> <br />
+        Lat: {lat.toFixed(4)}
+        <br />
+        Lon: {lon.toFixed(4)}
+        <br />
+        Alt: {alt.toFixed(2)} km
       </div>
-    `,
-      className: "custom-balloon-icon",
-      iconSize: [24, 40],
-      iconAnchor: [12, 12],
-    });
+    </Popup>
+  </Marker>
+));
+function App() {
   const startIcon = L.divIcon({
     html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>`,
     className: "custom-start-icon",
@@ -88,7 +113,6 @@ function App() {
     })),
   });
   const displayBalloons = balloonQueries[timeOffset]?.data || [];
-  const currentBalloons = balloonQueries[0]?.data || [];
   const buildPaths = () => {
     const paths = [];
     const allData = balloonQueries
@@ -261,24 +285,14 @@ function App() {
           )}
           {displayBalloons?.map(
             ([lat, lon, alt]: [number, number, number], index: number) => (
-              <Marker
-                position={[lat, lon]}
-                icon={balloonIcon(alt, index)}
-                eventHandlers={{
-                  click: () => setSelectedBalloon(index),
-                }}
-              >
-                <Popup>
-                  <div className="text-sm font-mono">
-                    <strong>Balloon #{index}</strong> <br />
-                    Lat: {lat.toFixed(4)}
-                    <br />
-                    Lon: {lon.toFixed(4)}
-                    <br />
-                    Alt: {alt.toFixed(2)} km
-                  </div>
-                </Popup>
-              </Marker>
+              <BalloonMarker
+                key={index}
+                lat={lat}
+                lon={lon}
+                alt={alt}
+                index={index}
+                onClick={() => setSelectedBalloon(index)}
+              />
             ),
           )}
           {selectedBalloon !== null &&
@@ -300,7 +314,7 @@ function App() {
         </MapContainer>
       </div>
       {displayBalloons && (
-        <div className="absolute bottom-4 left-4 z-[1000] bg-white px-4 py-2 rounded-lg shadow-lg">
+        <div className="absolute bottom-4 left-4 z-[1000] bg-white px-4 py-2 rounded-lg shadow-lg font-mono">
           <span className="font-semibold">{displayBalloons.length}</span>{" "}
           balloons tracked tracked
         </div>
