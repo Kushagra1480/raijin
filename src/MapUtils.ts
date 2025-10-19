@@ -30,7 +30,13 @@ export const startIcon = L.divIcon({
   iconSize: [12, 12],
   iconAnchor: [6, 6],
 });
-
+export const simpleDotIcon = (alt: number) =>
+  L.divIcon({
+    html: `<div style="width: 8px; height: 8px; background: ${getAltitudeColor(alt)}; border: 1px solid white; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>`,
+    className: "simple-dot-icon",
+    iconSize: [8, 8],
+    iconAnchor: [4, 4],
+  });
 export const getBalloonName = (index: number) => {
   const adj = ADJECTIVES[index % ADJECTIVES.length];
   const noun = NOUNS[Math.floor(index / ADJECTIVES.length) % NOUNS.length];

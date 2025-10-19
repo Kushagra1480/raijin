@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Marker, Popup } from "react-leaflet";
-import { balloonIcon } from "./MapUtils";
+import { balloonIcon, simpleDotIcon } from "./MapUtils";
 
 export const BalloonMarker = memo<{
   lat: number;
@@ -8,10 +8,11 @@ export const BalloonMarker = memo<{
   alt: number;
   index: number;
   onClick: () => void;
-}>(({ lat, lon, alt, index, onClick }) => (
+  showSimple: boolean;
+}>(({ lat, lon, alt, index, onClick, showSimple }) => (
   <Marker
     position={[lat, lon]}
-    icon={balloonIcon(alt, index)}
+    icon={showSimple ? simpleDotIcon(alt) : balloonIcon(alt, index)}
     eventHandlers={{ click: onClick }}
   ></Marker>
 ));

@@ -1,7 +1,13 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import React from "react";
 import { useState } from "react";
-import { MapContainer, Marker, Polyline, TileLayer } from "react-leaflet";
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  TileLayer,
+  useMapEvents,
+} from "react-leaflet";
 import { BalloonMarker, PathPoint } from "./MarkerUtils";
 import { startIcon } from "./MapUtils";
 import { BalloonCard } from "./Components/BalloonCard";
@@ -9,6 +15,15 @@ import { BalloonCard } from "./Components/BalloonCard";
 function App() {
   const [selectedBalloon, setSelectedBalloon] = useState(null);
   const [timeOffset, setTimeOffset] = useState(0);
+  const [zoomLevel, setZoomLevel] = useState(5);
+  const ZoomTracker = () => {
+    const map = useMapEvents({
+      zoomend: () => {
+        setZoomLevel(map.getZoom());
+      },
+    });
+    return null;
+  };
   const {
     data: balloons,
     isLoading,
@@ -17,8 +32,7 @@ function App() {
     queryKey: ["balloons", 0],
     queryFn: async () => {
       const res = await fetch(
-        "https://api.allorigins.win/raw?url=" +
-          encodeURIComponent("https://a.windbornesystems.com/treasure/00.json"),
+        `https://frosty-tooth-d188.kushagrakartik1480.workers.dev/?url=${encodeURIComponent("https://a.windbornesystems.com/treasure/00.json")}`,
       );
       const data = await res.json();
       return data.filter(
@@ -40,7 +54,7 @@ function App() {
       queryFn: async () => {
         const file = i.toString().padStart(2, "0");
         const res = await fetch(
-          `https://corsproxy.io/?https://a.windbornesystems.com/treasure/${file}.json`,
+          `https://frosty-tooth-d188.kushagrakartik1480.workers.dev/?url=${encodeURIComponent(`https://a.windbornesystems.com/treasure/${file}.json`)}`,
         );
         const data = await res.json();
         return data.filter(
@@ -248,6 +262,7 @@ function App() {
             [90, 180],
           ]}
         >
+          <ZoomTracker />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -269,6 +284,7 @@ function App() {
                 alt={alt}
                 index={index}
                 onClick={() => setSelectedBalloon(index)}
+                showSimple={zoomLevel < 4}
               />
             ),
           )}
