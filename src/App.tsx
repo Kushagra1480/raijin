@@ -10,7 +10,8 @@ function App() {
     queryKey: ["balloons", 0],
     queryFn: async () => {
       const res = await fetch(
-        "https://corsproxy.io/?https://a.windbornesystems.com/treasure/00.json",
+        "https://api.allorigins.win/raw?url=" +
+          encodeURIComponent("https://a.windbornesystems.com/treasure/00.json"),
       );
       const data = await res.json();
       return data.filter(
@@ -25,6 +26,16 @@ function App() {
     },
     staleTime: 60 * 60 * 1000,
     refetchInterval: 60 * 60 * 1000,
+  });
+  const { data: weatherData } = useQuery({
+    queryKey: ["rainviewer"],
+    queryFn: async () => {
+      const res = await fetch(
+        "https://api.rainviewer.com/public/weather-maps.json",
+      );
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
   return (
     <>
@@ -41,8 +52,8 @@ function App() {
         )}
 
         <MapContainer
-          center={[20, 0]}
-          zoom={2}
+          center={[37.4419, 122.143]}
+          zoom={5}
           scrollWheelZoom={true}
           style={{ height: "100vh", width: "100%" }}
         >
@@ -50,6 +61,14 @@ function App() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+
+          {weatherData?.radar?.past?.[0] && (
+            <TileLayer
+              url={`https://tilecache.rainviewer.com${weatherData.radar.past[0].path}/256/{z}/{x}/{y}/2/1_1.png`}
+              attribution="RainViewer.com"
+              opacity={0.6}
+            />
+          )}
           {balloons?.map(
             ([lat, lon, alt]: [number, number, number], index: number) => (
               <CircleMarker
