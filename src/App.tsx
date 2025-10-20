@@ -415,7 +415,7 @@ function App() {
         </MapContainer>
       </div>
       {displayBalloons && (
-        <div className="absolute bottom-4 left-4 z-[1000] bg-white px-4 py-2 rounded-lg shadow-lg font-mono opacity-80">
+        <div className="absolute bottom-4 right-4 z-[1000] bg-white px-4 py-2 rounded-lg shadow-lg font-mono opacity-80">
           <span className="font-semibold">{displayBalloons.length}</span>{" "}
           balloons tracked
         </div>

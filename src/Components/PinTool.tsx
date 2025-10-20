@@ -1,4 +1,5 @@
 import { getBalloonName } from "../MapUtils";
+import analysisImage from "../protractor.png";
 
 export const PinTool = ({
   setPinLocation,
@@ -29,6 +30,16 @@ export const PinTool = ({
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>
+      </div>
+
+      <div className=" p-3 flex justify-center">
+        <div className="p-3">
+          <img
+            src={analysisImage}
+            alt="Analysis Tool"
+            className="w-32 h-32 object-contain"
+          />
+        </div>
       </div>
 
       <div className="p-5 border-b">
@@ -109,7 +120,7 @@ export const PinTool = ({
             PAST 24H ({historicalBalloonsInArea.length})
           </span>
         </div>
-        <div className="max-h-40 overflow-y-auto space-y-1">
+        <div className="max-h-32 overflow-y-auto space-y-1">
           {historicalBalloonsInArea.length === 0 ? (
             <p className="text-xs text-slate-500 italic">
               No balloons passed through
