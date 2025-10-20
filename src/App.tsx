@@ -2,6 +2,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import React from "react";
 import { useState } from "react";
 import {
+  Circle,
   MapContainer,
   Marker,
   Polyline,
@@ -9,13 +10,44 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import { BalloonMarker, PathPoint } from "./MarkerUtils";
-import { startIcon } from "./MapUtils";
+import { getDistance, pinIcon, startIcon } from "./MapUtils";
 import { BalloonCard } from "./Components/BalloonCard";
+import { Legend } from "./Components/Legend";
+import { PinTool } from "./Components/PinTool";
 
 function App() {
   const [selectedBalloon, setSelectedBalloon] = useState(null);
   const [timeOffset, setTimeOffset] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(5);
+  const [activeAltitudes, setActiveAltitudes] = useState({
+    low: true,
+    medium: true,
+    high: true,
+    veryHigh: true,
+  });
+  const [pinMode, setPinMode] = useState(false);
+  const [pinLocation, setPinLocation] = useState(null);
+  const [pinRadius, setPinRadius] = useState(100);
+  const [activeTool, setActiveTool] = useState(null);
+  const MapClickHandler = () => {
+    useMapEvents({
+      click: (e) => {
+        if (pinMode) {
+          setPinLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+        }
+      },
+    });
+    return null;
+  };
+  const filterByAltitude = (balloons) => {
+    if (!balloons) return [];
+    return balloons.filter(([lat, lon, alt]) => {
+      if (alt < 10) return activeAltitudes.low;
+      if (alt < 20) return activeAltitudes.medium;
+      if (alt < 30) return activeAltitudes.high;
+      return activeAltitudes.veryHigh;
+    });
+  };
   const ZoomTracker = () => {
     const map = useMapEvents({
       zoomend: () => {
@@ -71,7 +103,9 @@ function App() {
       refetchInterval: i === 0 ? 60 * 60 * 1000 : false,
     })),
   });
-  const displayBalloons = balloonQueries[timeOffset]?.data || [];
+  const displayBalloons = filterByAltitude(
+    balloonQueries[timeOffset]?.data || [],
+  );
   const buildPaths = () => {
     const paths = [];
     const allData = balloonQueries
@@ -114,133 +148,167 @@ function App() {
     },
     staleTime: 5 * 60 * 1000,
   });
+  const currentBalloonsInArea = pinLocation
+    ? displayBalloons
+        .map(([lat, lon, alt], index) => ({
+          index,
+          distance: getDistance(pinLocation.lat, pinLocation.lng, lat, lon),
+        }))
+        .filter(({ distance }) => distance <= pinRadius)
+        .sort((a, b) => a.distance - b.distance)
+    : [];
+
+  const historicalBalloonsInArea = pinLocation
+    ? (() => {
+        const results = [];
+        const allData = balloonQueries.map((q) => q.data).filter(Boolean);
+
+        if (allData.length === 0) return [];
+
+        const minBalloonCount = Math.min(...allData.map((d) => d.length));
+
+        for (
+          let balloonIndex = 0;
+          balloonIndex < minBalloonCount;
+          balloonIndex++
+        ) {
+          for (let hourIndex = 0; hourIndex < allData.length; hourIndex++) {
+            const position = allData[hourIndex][balloonIndex];
+            if (!position || !Array.isArray(position) || position.length !== 3)
+              continue;
+
+            const [lat, lon] = position;
+            const distance = getDistance(
+              pinLocation.lat,
+              pinLocation.lng,
+              lat,
+              lon,
+            );
+
+            if (distance <= pinRadius) {
+              results.push({
+                index: balloonIndex,
+                hoursAgo: hourIndex,
+                distance,
+              });
+            }
+          }
+        }
+
+        return results.sort((a, b) => {
+          if (a.hoursAgo !== b.hoursAgo) return a.hoursAgo - b.hoursAgo;
+          return a.distance - b.distance;
+        });
+      })()
+    : [];
 
   return (
     <>
       <div className="relative h-screen w-screen font-mono">
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white p-4 rounded-lg shadow-lg opacity-80">
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-semibold">Rewind:</label>
-            <input
-              type="range"
-              min="0"
-              max="23"
-              value={timeOffset}
-              onChange={(e) => {
-                setTimeOffset(Number(e.target.value));
-                setSelectedBalloon(null); // Clear selection on time change
-              }}
-              className="w-48"
-            />
-            <span className="text-sm font-mono">
-              {timeOffset === 0 ? "Now" : `-${timeOffset}h`}
-            </span>
-          </div>
-        </div>
-        <div className="absolute top-4 right-4 z-[1000] bg-white p-4 rounded-lg shadow-lg max-w-xs opacity-80">
-          <h3 className="font-semibold mb-2 text-sm">Balloon Altitude</h3>
-          <div className="space-y-1 text-xs mb-5">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#f8dda4" }}
-              ></div>
-              <span>&lt;10 km</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#f9a03f" }}
-              ></div>
-              <span>10-20 km</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#d45113" }}
-              ></div>
-              <span>20-30 km</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#813405" }}
-              ></div>
-              <span>&gt;30 km</span>
-            </div>
-            <span className="text-xs font-bold mt-5">
-              Source:
-              <a
-                className="font-normal text-blue-700 hover:text-blue-800 underline"
-                href="https://api.windbornesystems.com/api-experience/docs"
-                target="_blank"
-              >
-                WindBorne API
-              </a>
-            </span>
-          </div>
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 opacity-90 z-[1000] bg-white rounded-4xl shadow-lg border border-slate-200 flex gap-1">
+          <button
+            onClick={() =>
+              setActiveTool(activeTool === "rewind" ? null : "rewind")
+            }
+            className={`p-2 rounded-4xl transition ${
+              activeTool === "rewind"
+                ? "bg-blue-500 text-white"
+                : "hover:bg-slate-100 text-slate-700"
+            }`}
+            title="Rewind Tool"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M3 12a9 9 0 0 0 5.998 8.485m12.002 -8.485a9 9 0 1 0 -18 0" />
+              <path d="M12 7v5" />
+              <path d="M12 15h2a1 1 0 0 1 1 1v1a1 1 0 0 1 -1 1h-1a1 1 0 0 0 -1 1v1a1 1 0 0 0 1 1h2" />
+              <path d="M18 15v2a1 1 0 0 0 1 1h1" />
+              <path d="M21 15v6" />
+            </svg>
+          </button>
 
-          <h3 className="font-semibold mb-2 text-sm border-t pt-3">
-            Precipitation
-          </h3>
-          <div className="space-y-1 text-xs">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#4a90e2" }}
-              ></div>
-              <span>Light rain</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#f1c40f" }}
-              ></div>
-              <span>Moderate rain</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#e67e22" }}
-              ></div>
-              <span>Heavy rain</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "#e74c3c" }}
-              ></div>
-              <span>Very heavy rain</span>
-            </div>
-            <span className="text-xs font-bold mt-5">
-              Source:
-              <a
-                className="font-normal text-blue-700 hover:text-blue-800 underline"
-                href="https://www.rainviewer.com/"
-                target="_blank"
-              >
-                RainViewer API
-              </a>
-            </span>
-          </div>
-
-          <div className="mt-3 pt-3 border-t text-xs text-gray-600">
-            <div className="flex gap-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="icon icon-tabler icons-tabler-filled icon-tabler-info-circle"
-              >
-                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                <path d="M12 2c5.523 0 10 4.477 10 10a10 10 0 0 1 -19.995 .324l-.005 -.324l.004 -.28c.148 -5.393 4.566 -9.72 9.996 -9.72zm0 9h-1l-.117 .007a1 1 0 0 0 0 1.986l.117 .007v3l.007 .117a1 1 0 0 0 .876 .876l.117 .007h1l.117 -.007a1 1 0 0 0 .876 -.876l.007 -.117l-.007 -.117a1 1 0 0 0 -.764 -.857l-.112 -.02l-.117 -.006v-3l-.007 -.117a1 1 0 0 0 -.876 -.876l-.117 -.007zm.01 -3l-.127 .007a1 1 0 0 0 0 1.986l.117 .007l.127 -.007a1 1 0 0 0 0 -1.986l-.117 -.007z" />
-              </svg>
-              Click a balloon to view its 24-hour flight path and details
-            </div>
-          </div>
+          <button
+            onClick={() => {
+              const newTool = activeTool === "analysis" ? null : "analysis";
+              setActiveTool(newTool);
+              setPinMode(newTool === "analysis");
+              if (newTool !== "analysis") setPinLocation(null);
+            }}
+            className={`p-2 rounded-4xl transition ${
+              activeTool === "analysis"
+                ? "bg-blue-500 text-white"
+                : "hover:bg-slate-100 text-slate-700"
+            }`}
+            title="Radius Analysis Tool"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M11 18l-2 -1l-6 3v-13l6 -3l6 3l6 -3v7.5" />
+              <path d="M9 4v13" />
+              <path d="M15 7v5" />
+              <path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+              <path d="M20.2 20.2l1.8 1.8" />
+            </svg>
+          </button>
         </div>
+
+        {activeTool === "rewind" && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white p-4 rounded-lg shadow-lg border border-slate-200">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-semibold">Rewind:</label>
+              <input
+                type="range"
+                min="0"
+                max="23"
+                value={timeOffset}
+                onChange={(e) => {
+                  setTimeOffset(Number(e.target.value));
+                  setSelectedBalloon(null);
+                }}
+                className="w-48"
+              />
+              <span className="text-sm font-mono">
+                {timeOffset === 0 ? "Now" : `-${timeOffset}h`}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <Legend
+          activeAltitudes={activeAltitudes}
+          setActiveAltitudes={setActiveAltitudes}
+        />
+
+        {pinLocation && activeTool === "analysis" && (
+          <PinTool
+            setPinLocation={setPinLocation}
+            pinRadius={pinRadius}
+            setPinRadius={setPinRadius}
+            currentBalloonsInArea={currentBalloonsInArea}
+            historicalBalloonsInArea={historicalBalloonsInArea}
+            setSelectedBalloon={setSelectedBalloon}
+          />
+        )}
         {isLoading && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white px-4 py-2 rounded-lg shadow-lg">
             Loading balloons...
@@ -263,6 +331,7 @@ function App() {
           ]}
         >
           <ZoomTracker />
+          <MapClickHandler />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -325,6 +394,24 @@ function App() {
                 </>
               ) : null;
             })()}
+          {pinLocation && (
+            <>
+              <Marker
+                position={[pinLocation.lat, pinLocation.lng]}
+                icon={pinIcon}
+              />
+              <Circle
+                center={[pinLocation.lat, pinLocation.lng]}
+                radius={pinRadius * 1000}
+                pathOptions={{
+                  color: "#3b82f6",
+                  fillColor: "#3b82f6",
+                  fillOpacity: 0.1,
+                  weight: 2,
+                }}
+              />
+            </>
+          )}
         </MapContainer>
       </div>
       {displayBalloons && (

@@ -37,6 +37,19 @@ export const simpleDotIcon = (alt: number) =>
     iconSize: [8, 8],
     iconAnchor: [4, 4],
   });
+export const pinIcon = L.divIcon({
+  html: `
+    <div style="position: relative;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="2">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+        <circle cx="12" cy="9" r="2.5" fill="white"/>
+      </svg>
+    </div>
+  `,
+  className: "pin-marker",
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+});
 export const getBalloonName = (index: number) => {
   const adj = ADJECTIVES[index % ADJECTIVES.length];
   const noun = NOUNS[Math.floor(index / ADJECTIVES.length) % NOUNS.length];
