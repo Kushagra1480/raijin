@@ -1,11 +1,12 @@
 import L from "leaflet";
 import { ADJECTIVES, NOUNS } from "./NameData";
+import { ALTITUDE_COLORS } from "./Enums";
 
 export const getAltitudeColor = (alt: number) => {
-  if (alt < 10) return "#f8dda4";
-  if (alt < 20) return "#f9a03f";
-  if (alt < 30) return "#d45113";
-  return "#813405";
+  if (alt < 10) return ALTITUDE_COLORS.LESS_THAN_TEN_KM;
+  if (alt < 20) return ALTITUDE_COLORS.TEN_TO_TWENTY_KM;
+  if (alt < 30) return ALTITUDE_COLORS.TWENTY_TO_THIRTY_KM;
+  return ALTITUDE_COLORS.GREATER_THAN_THIRY_KM;
 };
 
 export const balloonIcon = (alt: number, id: number) =>

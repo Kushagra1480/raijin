@@ -1,3 +1,5 @@
+import { ALTITUDE_COLORS } from "../Enums";
+
 export const Legend = ({ activeAltitudes, setActiveAltitudes }) => {
   return (
     <div className="absolute top-4 right-4 z-[1000] bg-white p-4 rounded-lg shadow-lg max-w-xs opacity-80">
@@ -11,7 +13,7 @@ export const Legend = ({ activeAltitudes, setActiveAltitudes }) => {
         >
           <div
             className="w-4 h-4 rounded"
-            style={{ backgroundColor: "#f8dda4" }}
+            style={{ backgroundColor: ALTITUDE_COLORS.LESS_THAN_TEN_KM }}
           ></div>
           <span>&lt;10 km</span>
           {!activeAltitudes.low && (
@@ -26,7 +28,7 @@ export const Legend = ({ activeAltitudes, setActiveAltitudes }) => {
         >
           <div
             className="w-4 h-4 rounded"
-            style={{ backgroundColor: "#f9a03f" }}
+            style={{ backgroundColor: ALTITUDE_COLORS.TEN_TO_TWENTY_KM }}
           ></div>
           <span>10-20 km</span>
           {!activeAltitudes.medium && (
@@ -41,7 +43,7 @@ export const Legend = ({ activeAltitudes, setActiveAltitudes }) => {
         >
           <div
             className="w-4 h-4 rounded"
-            style={{ backgroundColor: "#d45113" }}
+            style={{ backgroundColor: ALTITUDE_COLORS.TWENTY_TO_THIRTY_KM }}
           ></div>
           <span>20-30 km</span>
           {!activeAltitudes.high && (
@@ -59,7 +61,7 @@ export const Legend = ({ activeAltitudes, setActiveAltitudes }) => {
         >
           <div
             className="w-4 h-4 rounded"
-            style={{ backgroundColor: "#813405" }}
+            style={{ backgroundColor: ALTITUDE_COLORS.GREATER_THAN_THIRY_KM }}
           ></div>
           <span>&gt;30 km</span>
           {!activeAltitudes.veryHigh && (
